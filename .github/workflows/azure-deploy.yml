@@ -25,16 +25,16 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore VehicleDemo.sln
     
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build VehicleDemo.sln --configuration Release --no-restore
     
     - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal
+      run: dotnet test VehicleDemo.sln --configuration Release --no-build --verbosity normal
     
     - name: Publish
-      run: dotnet publish --configuration Release --output ./output
+      run: dotnet publish VehicleDemo.csproj --configuration Release --output ./output
     
     - name: Deploy to Azure Functions
       uses: Azure/functions-action@v1

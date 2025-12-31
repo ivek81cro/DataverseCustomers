@@ -20,13 +20,13 @@ jobs:
         dotnet-version: '10.0.x'
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore VehicleDemo.sln
     
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build VehicleDemo.sln --configuration Release --no-restore
     
     - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test VehicleDemo.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
