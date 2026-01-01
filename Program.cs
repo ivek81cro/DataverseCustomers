@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.Functions.Worker;
 using VehicleDemo.Configuration;
 using VehicleDemo.Services;
 
@@ -45,6 +46,10 @@ var host = new HostBuilder()
         
         // Legacy service for backward compatibility with tests
         services.AddTransient<DataverseAuthService>();
+
+        // Configure Application Insights
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
     })
     .Build();
 

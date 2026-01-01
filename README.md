@@ -32,6 +32,7 @@ Azure Functions application for retrieving customers and invoices from Microsoft
 - 👥 **Customer Management** - Full CRUD-ready customer operations
 - 🛡️ **Comprehensive Error Handling** - Custom exceptions and proper HTTP status codes
 - 📝 **Structured Logging** - Application Insights integration with context
+- 📚 **Swagger/OpenAPI Documentation** - Interactive API documentation with Swagger UI
 - 🧪 **Unit Tests** - 17 tests with FluentAssertions and Moq
 - 🏗️ **Clean Architecture** - Repository pattern ready, SOLID principles
 - ⚡ **Async/Await** - Fully asynchronous code
@@ -140,6 +141,23 @@ http://localhost:7071/api/customers
 http://localhost:7071/api/invoices
 http://localhost:7071/api/customers/{customerId}/invoices
 ```
+
+### 📖 Swagger UI
+
+After starting the application, access the interactive API documentation:
+
+**Swagger UI:**
+```
+http://localhost:7071/api/swagger/ui
+```
+
+**OpenAPI Specification:**
+```
+http://localhost:7071/api/swagger.json
+http://localhost:7071/api/swagger.yaml
+```
+
+> 📘 For detailed Swagger setup and usage instructions, see [SWAGGER_SETUP.md](SWAGGER_SETUP.md)
 
 ### Docker (Optional)
 
