@@ -1,4 +1,4 @@
-# 🚗 VehicleDemo - Dataverse Customer & Invoice API
+# Demo - Dataverse Customer & Invoice API
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Azure Functions](https://img.shields.io/badge/Azure%20Functions-v4-0062AD?logo=azure-functions)](https://azure.microsoft.com/en-us/services/functions/)
