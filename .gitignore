@@ -268,7 +268,6 @@ coverage/
 *.coverage
 *.coveragexml
 TestResults/
-/REFACTORING.md
-/GITHUB_SETUP.md
-/CONTRIBUTING.md
-/GITHUB_ACTIONS_FIX.md
+
+# Documentation folder - keep local only
+Documentation/

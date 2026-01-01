@@ -1,46 +1,101 @@
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
+using VehicleDemo.Configuration;
 
-namespace VehicleDemo.Services
+namespace VehicleDemo.Services;
+
+/// <summary>
+/// Service for handling OAuth 2.0 authentication with Microsoft Dataverse.
+/// Implements token caching to minimize authentication requests.
+/// </summary>
+public class DataverseAuthService : IDataverseAuthService
 {
-    public class DataverseAuthService
-    {
-        private readonly HttpClient _http;
-        private readonly IConfiguration _config;
+    private readonly HttpClient _httpClient;
+    private readonly DataverseOptions _options;
+    private readonly ILogger<DataverseAuthService> _logger;
+    
+    private string? _cachedToken;
+    private DateTime _tokenExpiryTime;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
-        public DataverseAuthService(HttpClient http, IConfiguration config)
+    public DataverseAuthService(
+        HttpClient httpClient,
+        IOptions<DataverseOptions> options,
+        ILogger<DataverseAuthService> logger)
+    {
+        _httpClient = httpClient;
+        _options = options.Value;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> GetTokenAsync()
+    {
+        // Check if cached token is still valid
+        if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiryTime)
         {
-            _http = http;
-            _config = config;
+            _logger.LogDebug("Using cached Dataverse access token");
+            return _cachedToken;
         }
 
-        public virtual async Task<string> GetTokenAsync()
+        await _tokenLock.WaitAsync();
+        try
         {
-            var tenantId = _config["TENANT_ID"];
-            var clientId = _config["CLIENT_ID"];
-            var clientSecret = _config["CLIENT_SECRET"];
-            var dataverseUrl = _config["DATAVERSE_URL"];
+            // Double-check after acquiring lock
+            if (!string.IsNullOrEmpty(_cachedToken) && DateTime.UtcNow < _tokenExpiryTime)
+            {
+                return _cachedToken;
+            }
 
-            var url = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+            _logger.LogInformation("Requesting new Dataverse access token");
 
             var body = new Dictionary<string, string>
             {
-                ["client_id"] = clientId!,
-                ["client_secret"] = clientSecret!,
+                ["client_id"] = _options.ClientId,
+                ["client_secret"] = _options.ClientSecret,
                 ["grant_type"] = "client_credentials",
-                ["scope"] = $"{dataverseUrl}/.default"
+                ["scope"] = _options.GetScopeUrl()
             };
 
-            var response = await _http.PostAsync(url, new FormUrlEncodedContent(body));
+            var response = await _httpClient.PostAsync(
+                _options.GetTokenUrl(),
+                new FormUrlEncodedContent(body));
+
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
 
-            return doc.RootElement.GetProperty("access_token").GetString()!;
+            _cachedToken = doc.RootElement.GetProperty("access_token").GetString()!;
+            _tokenExpiryTime = DateTime.UtcNow.AddMinutes(_options.TokenCacheDurationMinutes);
+
+            _logger.LogInformation("Successfully obtained new Dataverse access token. Expires at: {ExpiryTime}", 
+                _tokenExpiryTime);
+
+            return _cachedToken;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to obtain Dataverse access token due to network error");
+            throw;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse token response from authentication service");
+            throw;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void ClearTokenCache()
+    {
+        _logger.LogInformation("Clearing cached Dataverse access token");
+        _cachedToken = null;
+        _tokenExpiryTime = DateTime.MinValue;
     }
 }

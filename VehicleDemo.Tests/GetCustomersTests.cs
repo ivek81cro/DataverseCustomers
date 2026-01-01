@@ -1,9 +1,10 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
+using VehicleDemo.Configuration;
 using VehicleDemo.Constants;
 using VehicleDemo.Exceptions;
 using VehicleDemo.Services;
@@ -19,12 +20,13 @@ public class GetCustomersTests
         var token = "test-token";
         var dataverseUrl = "https://org.example.crm.dynamics.com";
 
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DATAVERSE_URL"] = dataverseUrl
-            })
-            .Build();
+        var options = Options.Create(new DataverseOptions
+        {
+            DataverseUrl = dataverseUrl,
+            TenantId = "test-tenant",
+            ClientId = "test-client",
+            ClientSecret = "test-secret"
+        });
 
         var handler = new StubHttpMessageHandler
         {
@@ -46,11 +48,11 @@ public class GetCustomersTests
             .Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 
-        var auth = new Mock<DataverseAuthService>(new HttpClient(), config);
-        auth.Setup(a => a.GetTokenAsync()).ReturnsAsync(token);
+        var authService = new Mock<IDataverseAuthService>();
+        authService.Setup(a => a.GetTokenAsync()).ReturnsAsync(token);
 
-        var logger = NullLogger<GetCustomers>.Instance;
-        var sut = new GetCustomers(httpFactory.Object, auth.Object, config, logger);
+        var logger = NullLogger<CustomerService>.Instance;
+        var sut = new CustomerService(httpFactory.Object, authService.Object, options, logger);
 
         var customers = await sut.GetCustomersAsync();
 
@@ -73,19 +75,20 @@ public class GetCustomersTests
         handler.LastRequest!.Headers.Authorization!.Scheme.Should().Be("Bearer");
         handler.LastRequest!.Headers.Authorization!.Parameter.Should().Be(token);
 
-        auth.Verify(a => a.GetTokenAsync(), Times.Once);
+        authService.Verify(a => a.GetTokenAsync(), Times.Once);
         httpFactory.Verify(f => f.CreateClient(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
     public async Task GetCustomersAsync_WhenApiReturnsError_ThrowsDataverseApiException()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DATAVERSE_URL"] = "https://org.example.crm.dynamics.com"
-            })
-            .Build();
+        var options = Options.Create(new DataverseOptions
+        {
+            DataverseUrl = "https://org.example.crm.dynamics.com",
+            TenantId = "test-tenant",
+            ClientId = "test-client",
+            ClientSecret = "test-secret"
+        });
 
         var handler = new StubHttpMessageHandler
         {
@@ -99,27 +102,28 @@ public class GetCustomersTests
         var httpFactory = new Mock<IHttpClientFactory>();
         httpFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var auth = new Mock<DataverseAuthService>(new HttpClient(), config);
-        auth.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
+        var authService = new Mock<IDataverseAuthService>();
+        authService.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
 
-        var logger = NullLogger<GetCustomers>.Instance;
-        var sut = new GetCustomers(httpFactory.Object, auth.Object, config, logger);
+        var logger = NullLogger<CustomerService>.Instance;
+        var sut = new CustomerService(httpFactory.Object, authService.Object, options, logger);
 
         var act = async () => await sut.GetCustomersAsync();
 
         await act.Should().ThrowAsync<DataverseApiException>()
-            .WithMessage("*Failed to fetch customers: Unauthorized*");
+            .WithMessage("*Dataverse API request failed: Unauthorized*");
     }
 
     [Fact]
     public async Task GetCustomersAsync_WhenInvalidJson_ThrowsDataverseApiException()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DATAVERSE_URL"] = "https://org.example.crm.dynamics.com"
-            })
-            .Build();
+        var options = Options.Create(new DataverseOptions
+        {
+            DataverseUrl = "https://org.example.crm.dynamics.com",
+            TenantId = "test-tenant",
+            ClientId = "test-client",
+            ClientSecret = "test-secret"
+        });
 
         var handler = new StubHttpMessageHandler
         {
@@ -133,27 +137,28 @@ public class GetCustomersTests
         var httpFactory = new Mock<IHttpClientFactory>();
         httpFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var auth = new Mock<DataverseAuthService>(new HttpClient(), config);
-        auth.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
+        var authService = new Mock<IDataverseAuthService>();
+        authService.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
 
-        var logger = NullLogger<GetCustomers>.Instance;
-        var sut = new GetCustomers(httpFactory.Object, auth.Object, config, logger);
+        var logger = NullLogger<CustomerService>.Instance;
+        var sut = new CustomerService(httpFactory.Object, authService.Object, options, logger);
 
         var act = async () => await sut.GetCustomersAsync();
 
         await act.Should().ThrowAsync<DataverseApiException>()
-            .WithMessage("*Invalid response format from Dataverse*");
+            .WithMessage("*Invalid JSON response from Dataverse*");
     }
 
     [Fact]
     public async Task GetCustomersAsync_WhenNetworkError_ThrowsDataverseApiException()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DATAVERSE_URL"] = "https://org.example.crm.dynamics.com"
-            })
-            .Build();
+        var options = Options.Create(new DataverseOptions
+        {
+            DataverseUrl = "https://org.example.crm.dynamics.com",
+            TenantId = "test-tenant",
+            ClientId = "test-client",
+            ClientSecret = "test-secret"
+        });
 
         var handler = new StubHttpMessageHandler
         {
@@ -164,11 +169,11 @@ public class GetCustomersTests
         var httpFactory = new Mock<IHttpClientFactory>();
         httpFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var auth = new Mock<DataverseAuthService>(new HttpClient(), config);
-        auth.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
+        var authService = new Mock<IDataverseAuthService>();
+        authService.Setup(a => a.GetTokenAsync()).ReturnsAsync("test-token");
 
-        var logger = NullLogger<GetCustomers>.Instance;
-        var sut = new GetCustomers(httpFactory.Object, auth.Object, config, logger);
+        var logger = NullLogger<CustomerService>.Instance;
+        var sut = new CustomerService(httpFactory.Object, authService.Object, options, logger);
 
         var act = async () => await sut.GetCustomersAsync();
 
